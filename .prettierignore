@@ -1,0 +1,9 @@
+node_modules
+dist
+
+# Ignore artifacts:
+build
+coverage
+
+.eslintrc.cjs
+.package-lock.json
