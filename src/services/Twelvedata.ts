@@ -1,24 +1,27 @@
-import http from "../../../config/axios"
+import http from "../config/axios"
 
-export interface Stocks {
-  country: string
+export interface Stock {
+  symbol: string
+  name: string
   currency: string
   exchange: string
   mic_code: string
-  name: string
-  symbol: string
+  country: string
   type: string
 }
 
 interface GetStocksReponse {
-  data: Stocks[]
+  data: Stock[]
+}
+
+interface GetStockResponse {
+  data: Stock
 }
 
 class TwelvedataService {
   public getStocks(controller: AbortController) {
     return http.get<GetStocksReponse>("stocks", {
       params: {
-        source: "docs",
         exchange: "NYSE",
       },
       signal: controller.signal,
@@ -26,9 +29,9 @@ class TwelvedataService {
   }
 
   public getStockBySymbol(symbol: string, controller: AbortController) {
-    return http.get<GetStocksReponse>("stocks", {
+    return http.get<GetStockResponse>("time_series", {
       params: {
-        source: "docs",
+        apiKey: import.meta.env.VITE_APIKEY,
         symbol,
       },
       signal: controller.signal,

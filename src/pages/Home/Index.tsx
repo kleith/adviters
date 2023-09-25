@@ -11,43 +11,46 @@ import {
   TableRow,
 } from "@nextui-org/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { Link as LinkDom } from "react-router-dom"
 
-import TwelvedataService, { Stocks } from "./services/Twelvedata"
-import { paginate } from "./utils/pagination"
+import { Container } from "@components/Container"
+import TwelvedataService, { Stock } from "@services/Twelvedata"
+
 import { SearchIcon } from "./assets/SearchIcon"
+import { paginate } from "./utils/pagination"
 
 // [Done] listado de acciones en tabla con paginado
 export const Index = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [page, setPage] = useState<number>(1)
-  const [stocks, setStocks] = useState<Stocks[]>([])
+  const [stocks, setStocks] = useState<Stock[]>([])
   const [filterSymbol, setFilterSymbol] = useState<string>("")
   const [filterName, setFilterName] = useState<string>("")
 
   const rowsPerPage = 15
 
-  // Obtener stocks del servicio
+  // Obtener acciones del servicio
   useEffect(() => {
     const controller = new AbortController()
     setIsLoading(true)
 
-    async function getActions() {
-      const actions = await TwelvedataService.getStocks(controller)
+    async function getStocks() {
+      const response = await TwelvedataService.getStocks(controller)
       setIsLoading(false)
 
-      setStocks(actions.data.data)
+      setStocks(response.data.data)
     }
-    getActions()
+    getStocks()
 
     return () => {
       controller.abort()
     }
   }, [])
 
-  let pages: Stocks[][] = []
+  let pages: Stock[][] = []
 
   if (stocks.length) {
-    pages = paginate<Stocks>(stocks, rowsPerPage)
+    pages = paginate<Stock>(stocks, rowsPerPage)
   }
 
   const onSearchSymbolChange = useCallback((value: string) => {
@@ -105,9 +108,9 @@ export const Index = () => {
   // [DONE] el símbolo debe ser un link para ver el detalle de la acción
 
   // TODO: arreglar el paginado
-  // TODO: agregar react router para el link del símbolo
+  // [DONE] agregar react router para el link del símbolo
   return (
-    <div className='container m-4 p-4 mx-auto rounded-xl rounded-large shadow-small w-full flex flex-col gap-4'>
+    <Container>
       <div className='flex justify-between gap-4 items-end'>
         <Input
           isClearable
@@ -178,7 +181,9 @@ export const Index = () => {
           {(stock) => (
             <TableRow key={stock.symbol}>
               <TableCell>
-                <Link href={`/details/${stock.symbol}`}>{stock.symbol}</Link>
+                <Link as={LinkDom} to={`/details/${stock.symbol}`}>
+                  {stock.symbol}
+                </Link>
               </TableCell>
               <TableCell>{stock.name}</TableCell>
               <TableCell>{stock.currency}</TableCell>
@@ -187,6 +192,6 @@ export const Index = () => {
           )}
         </TableBody>
       </Table>
-    </div>
+    </Container>
   )
 }
