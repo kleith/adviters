@@ -14,19 +14,18 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link as LinkDom } from "react-router-dom"
 
 import { Container } from "@components/Container"
-import TwelvedataService, { Stock } from "@services/Twelvedata"
+import { Stock, getStocks } from "@services/twelvedata"
 
 import { SearchIcon } from "./assets/SearchIcon"
-import { paginate } from "./utils/pagination"
+import { paginate } from "./Home.utils"
 
-// [Done] listado de acciones en tabla con paginado
-export const Index = () => {
+// Listado de acciones en tabla con paginado
+export const Home = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [page, setPage] = useState<number>(1)
   const [stocks, setStocks] = useState<Stock[]>([])
   const [filterSymbol, setFilterSymbol] = useState<string>("")
   const [filterName, setFilterName] = useState<string>("")
-
   const rowsPerPage = 15
 
   // Obtener acciones del servicio
@@ -34,24 +33,18 @@ export const Index = () => {
     const controller = new AbortController()
     setIsLoading(true)
 
-    async function getStocks() {
-      const response = await TwelvedataService.getStocks(controller)
+    async function getStockFromApi() {
+      const response = await getStocks(controller.signal)
       setIsLoading(false)
 
       setStocks(response.data.data)
     }
-    getStocks()
+    getStockFromApi()
 
     return () => {
       controller.abort()
     }
   }, [])
-
-  let pages: Stock[][] = []
-
-  if (stocks.length) {
-    pages = paginate<Stock>(stocks, rowsPerPage)
-  }
 
   const onSearchSymbolChange = useCallback((value: string) => {
     if (value) {
@@ -76,15 +69,18 @@ export const Index = () => {
   const hasSearchStockFilter = Boolean(filterSymbol)
   const hasSearchNameFilter = Boolean(filterName)
 
+  // Filtros
   const filteredItems = useMemo(() => {
     let filteredStocks = [...stocks]
 
+    // Filtro por símbolo
     if (hasSearchStockFilter) {
       filteredStocks = filteredStocks.filter((stock) =>
         stock.symbol.toLowerCase().includes(filterSymbol.toLowerCase()),
       )
     }
 
+    // Filtro por nombre
     if (hasSearchNameFilter) {
       filteredStocks = filteredStocks.filter((stock) =>
         stock.name.toLowerCase().includes(filterName.toLowerCase()),
@@ -94,6 +90,7 @@ export const Index = () => {
     return filteredStocks
   }, [stocks, filterSymbol, filterName])
 
+  // Items que se muestran por página
   const items = useMemo(() => {
     const start = (page - 1) * rowsPerPage
     const end = start + rowsPerPage
@@ -101,14 +98,14 @@ export const Index = () => {
     return filteredItems.slice(start, end)
   }, [page, filteredItems, rowsPerPage])
 
-  console.count("Render")
+  // Creo el paginado
+  let pages: Stock[][] = []
 
-  // [DONE] búsqueda por nombre de acción
-  // [DONE] búsqueda por símobolo
-  // [DONE] el símbolo debe ser un link para ver el detalle de la acción
+  // Modifico la cantidad de página según los filtros
+  if (filteredItems.length) {
+    pages = paginate<Stock>(filteredItems, rowsPerPage)
+  }
 
-  // TODO: arreglar el paginado
-  // [DONE] agregar react router para el link del símbolo
   return (
     <Container>
       <div className='flex justify-between gap-4 items-end'>
@@ -176,7 +173,7 @@ export const Index = () => {
           emptyContent='Acción no encontrada'
           items={items}
           isLoading={isLoading}
-          loadingContent={<Spinner label='Loading...' />}
+          loadingContent={<Spinner label='Cargando...' />}
         >
           {(stock) => (
             <TableRow key={stock.symbol}>
