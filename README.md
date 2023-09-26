@@ -17,3 +17,9 @@ npm run dev
 ```
 
 Abrir [localhost:3000](http://localhost:3000/) en el navegador.
+
+---
+
+## FYI
+
+Si se ve un mensaje de error, es por el [`<StrictMode>`](https://es.react.dev/reference/react/StrictMode) de React. Si se borra este elemento del `main.tsx` dejará de aparecer.

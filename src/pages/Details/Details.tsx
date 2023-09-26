@@ -1,6 +1,6 @@
 import { Button, Select, SelectItem, Selection, Tab, Tabs } from "@nextui-org/react"
 import { format } from "date-fns"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 
 import { Container } from "@components/Container"
@@ -26,6 +26,7 @@ type Points = {
 
 export const Details = () => {
   const params = useParams()
+  const intervals = useRef<number | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [buttonDisabled, setButtonDisabled] = useState<boolean>(true)
   const [stock, setStock] = useState<Stock | null>(null)
@@ -62,11 +63,21 @@ export const Details = () => {
   useEffect(() => {
     // Valido el botón
     if (tabSelected === TypeQuery.realtime) {
-      setButtonDisabled(!realValue)
+      setButtonDisabled(!Array.from(realValue)[0])
     } else if (tabSelected === TypeQuery.historic) {
-      setButtonDisabled(!(historicalValue && startDate && endDate))
+      setButtonDisabled(!(Array.from(historicalValue)[0] && startDate && endDate))
     }
   }, [tabSelected, realValue, historicalValue, startDate, endDate])
+
+  // Limpio el intervalo
+  useEffect(() => {
+    // Elimino el intervalo al desmontar el componente
+    return () => {
+      if (intervals.current !== null) {
+        clearInterval(intervals.current)
+      }
+    }
+  }, [])
 
   const handleTabChange = useCallback((key: React.Key) => {
     setTabSelected(key as TypeQuery)
@@ -80,6 +91,30 @@ export const Details = () => {
     setEndDate(date)
   }, [])
 
+  // Query por tiempo real, intervalo
+  const getTimeSeriesInterval = useCallback(
+    async (controller: AbortController, interval: Interval) => {
+      console.count("Intervalo!")
+
+      setIsLoading(true)
+
+      const response = await getTimeSeries(
+        { symbol: params.symbol as string, interval },
+        controller.signal,
+      )
+
+      // Formateando data
+      const data = response.data.values?.map((value) => ({
+        x: new Date(value.datetime),
+        y: (Number(value.open) + Number(value.close)) / 2,
+      }))
+
+      setIsLoading(false)
+      setDataPoints(data)
+    },
+    [],
+  )
+
   // Graficar según lo seleccionado
   const handleGraph = useCallback(async () => {
     const controller = new AbortController()
@@ -87,22 +122,31 @@ export const Details = () => {
     if (params.symbol) {
       // Query por tiempo real
       if (tabSelected === TypeQuery.realtime && realValue) {
-        setIsLoading(true)
         const interval = Array.from(realValue)[0] as Interval
-        const response = await getTimeSeries({ symbol: params.symbol, interval }, controller.signal)
 
-        // Formateando data
-        const data = response.data.values?.map((value) => ({
-          x: new Date(value.datetime),
-          y: (Number(value.open) + Number(value.close)) / 2,
-        }))
+        // Limpiando intervalo si es que ya existe
+        if (intervals.current) {
+          clearInterval(intervals.current)
+          intervals.current = null
+        }
 
-        setIsLoading(false)
-        setDataPoints(data)
+        const time = interval.replace("min", "") as unknown as number
+
+        getTimeSeriesInterval(controller, interval)
+
+        intervals.current = setInterval(
+          () => getTimeSeriesInterval(controller, interval),
+          time * 60 * 1000,
+        )
+
         setTitle(`Tiempo real \u2013 Intervalo: ${interval}`)
       }
       // Query por tiempo histórico
       else if (tabSelected === TypeQuery.historic && historicalValue && startDate && endDate) {
+        // Limpio el intervalo si hago una query por histórico
+        if (intervals.current !== null) {
+          clearInterval(intervals.current)
+        }
         setIsLoading(true)
         const start_date = format(startDate, "yyyy-MM-dd HH:mm:ss")
         const end_date = format(endDate, "yyyy-MM-dd HH:mm:ss")
