@@ -1,32 +1,35 @@
-import { useState } from "react"
+import { NextUIProvider } from "@nextui-org/react"
+import { createBrowserRouter, RouterProvider } from "react-router-dom"
 
-import reactLogo from "./assets/react.svg"
+import { AxiosInterceptor } from "@config/axios"
+import { SnackbarProvider } from "@hooks/useSnackbar"
+import { Details } from "@pages/Details/Details"
+import { ErrorPage } from "@pages/Error/ErrorPage"
+import { Home } from "@pages/Home/Home"
 
-import viteLogo from "/vite.svg"
-import "./App.css"
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Home />,
+    errorElement: <ErrorPage />,
+  },
+  {
+    path: "/details/:symbol",
+    element: <Details />,
+  },
+])
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href='https://vitejs.dev' target='_blank' rel='noreferrer'>
-          <img src={viteLogo} className='logo' alt='Vite logo' />
-        </a>
-        <a href='https://react.dev' target='_blank' rel='noreferrer'>
-          <img src={reactLogo} className='logo react' alt='React logo' />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className='card'>
-        <button onClick={() => setCount((count) => count + 1)}>count is {count}</button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className='read-the-docs'>Click on the Vite and React logos to learn more</p>
-    </>
+    <NextUIProvider>
+      <SnackbarProvider>
+        <AxiosInterceptor>
+          <main>
+            <RouterProvider router={router} />
+          </main>
+        </AxiosInterceptor>
+      </SnackbarProvider>
+    </NextUIProvider>
   )
 }
 
